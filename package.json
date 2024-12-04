@@ -3,16 +3,23 @@
   "version": "0.1.0",
   "private": true,
   "dependencies": {
+    "@google/generative-ai": "^0.21.0",
+    "@huggingface/transformers": "^3.0.0",
     "@testing-library/jest-dom": "^5.17.0",
     "@testing-library/react": "^13.4.0",
     "@testing-library/user-event": "^13.5.0",
+    "axios": "^1.7.8",
+    "http": "^0.0.1-security",
+    "https": "^1.0.0",
+    "https-browserify": "^1.0.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-scripts": "5.0.1",
+    "url": "^0.11.4",
     "web-vitals": "^2.1.4"
   },
   "scripts": {
-    "start": "react-scripts start",
+    "start": "set HTTPS=true&&react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",
     "eject": "react-scripts eject"
@@ -34,5 +41,12 @@
       "last 1 firefox version",
       "last 1 safari version"
     ]
-  }
+  },
+  "devDependencies": {
+    "autoprefixer": "^10.4.20",
+    "postcss": "^8.4.49",
+    "tailwindcss": "^3.4.15"
+  },
+  "proxy": "https://192.168.1.17:5000"
+
 }
