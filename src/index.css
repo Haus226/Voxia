@@ -1,3 +1,35 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+
+
+/* Custom scrollbar styles for the dropdown */
+select {
+    scrollbar-width: thin;
+    scrollbar-color: var(--tw-scrollbar-thumb) var(--tw-scrollbar-track);
+}
+
+select::-webkit-scrollbar {
+    width: 8px;
+}
+
+select::-webkit-scrollbar-track {
+    background: var(--tw-scrollbar-track);
+    border-radius: 4px;
+}
+
+select::-webkit-scrollbar-thumb {
+    background-color: var(--tw-scrollbar-thumb);
+    border-radius: 4px;
+    border: 2px solid var(--tw-scrollbar-track);
+}
+
+/* Style for dropdown options */
+select option {
+    padding: 8px 12px;
+}
+
+select option:hover {
+    background-color: #EEF2FF;
+}
