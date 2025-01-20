@@ -245,12 +245,12 @@ const VoiceAssistant = () => {
     return (
         <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-blue-500 to-indigo-600 text-white p-8">
             <div className="w-full max-w-2xl bg-white shadow-lg rounded-lg p-6 text-gray-800">
-                <h1 className="text-3xl font-bold mb-6 text-center text-indigo-600">Voice Assistant</h1>
+                <h1 className="text-3xl font-bold mb-6 text-center text-indigo-600">Voxia</h1>
 
                 {/* Speaker selection - made more compact */}
                 <div className="mb-4">
                 <label className="block text-base font-semibold text-indigo-700 mb-1">
-                    Select Speaker
+                    Select Voice
                 </label>
                 <div className="relative">
                     <select
