@@ -89,15 +89,9 @@ const MessageBubble = ({ message }) => {
         audioRef.current.currentTime = percent * audioRef.current.duration;
         setProgress(percent * 100);
     };
-
-    const formatTimestamp = () => {
-        const date = new Date();
-        return date.toLocaleTimeString([], {
-            hour: '2-digit',
-            minute: '2-digit',
-            hour12: true
-        });
-    };
+    if (!message.timestamp) {
+        message.timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
+    }
 
     return (
         <div className={`flex ${isUser ? "justify-end" : "justify-start"}`}>
@@ -111,7 +105,7 @@ const MessageBubble = ({ message }) => {
                     <p className="text-sm">{message.text}</p>
 
                     <div className="mt-2 text-xs text-white/70">
-                        {formatTimestamp()}
+                        {message.timestamp}
                     </div>
                     
                     {hasAudio && (

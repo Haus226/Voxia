@@ -38,8 +38,6 @@ llm = genai.GenerativeModel('gemini-1.5-flash',
                             )
 chat = llm.start_chat()
 
-
-
 # Initialize Speech-To-Text Model
 device = "cuda:0" if torch.cuda.is_available() else "cpu"
 torch_dtype = torch.float16 if torch.cuda.is_available() else torch.float32
@@ -62,29 +60,23 @@ speaker = None
 
 
 
-
-
-@app.route('/api/upload', methods=['POST'])
-def set_speaker():
-    global isCloning
-    global speaker
-    isCloning = True
-    speaker = None
-    if 'audio' in request.files:
-        request.files["audio"].save(clonePath)
-        return jsonify({"success": "Your voice uploaded successfully"}), 200
-    else:
-        return jsonify({"error": "No audio file founded"}), 400
+@app.route('/api/stage', methods=['GET'])
+def get_stage():
+    """Endpoint to get the current processing stage."""
+    global current_stage
+    return jsonify({"stage": current_stage}), 200
 
 @app.route('/api/process', methods=['POST'])
 def process_audio_or_text():
+    global current_stage
+    current_stage = "Processing"  # Start with processing input
+    user_query = ""
     if 'audio' in request.files:
         audio_path = "temp.webm"
         request.files['audio'].save(audio_path)
         try:
             result = pipe(audio_path)
             user_query = result["text"]
-            print(user_query)
         except Exception as e:
             print(f"Error processing audio: {e}")
             return jsonify({"error": "An error occurred during audio processing"}), 500
@@ -93,35 +85,39 @@ def process_audio_or_text():
     else:
         return jsonify({"error": "No valid input found, either 'audio' or 'text' is required"}), 400
 
+    print("User Query: ", user_query)
+
     speaker = request.form.get("speaker")
     if speaker == "Your Voice":
         speaker = None
 
     try:
-        pre_prompt = f"""Considering the chat history and the current query: "{user_query}",
+        pre_prompt = f"""Considering the chat history and the current query: \"{user_query}\",
         generate a concise keyword or phrase most relevant to the query and history for web searching
-        if you think it is necessary. If not, enter null value.
-        The json should in {{"search_keyword":YOUR_KEYWORD_IN_STRING or null value}} format.
-        """
+        if you think it is necessary. If not, enter null value. Also, combine the user query and the 
+        generated keyword or phrase to produce a most relevant query for the reranker to rank the searched documents,
+        if the search is needed. If not, enter null value.
         
-        keywords = json.loads(chat.send_message(pre_prompt).text)["search_keyword"]
-        print("Keywords : ", keywords)
+        The json should in {{"search_keyword":YOUR_KEYWORD_IN_STRING or null value, "reranker_query":YOUR_QUERY_FOR_RERANKER_IN_STRING or null value}} format.
+        """
 
-        # Pop twice since the last and second last which are from user and model
-        chat.history.pop()
-        chat.history.pop()
+        response = chat.send_message(pre_prompt)
+        response_data = json.loads(response.text)
+        keywords = response_data["search_keyword"]
+        rerank_query = response_data["reranker_query"]
 
-        # Determine if search is needed
+        # Update stage to "searching" if web search is needed
+        current_stage = "Searching" if keywords != "null" else "Thinking"
+
         if keywords != "null":
-            search_results = search_web(keywords)
-            print(search_results)
-            # Format search results for the prompt, now including detailed content
+            search_results = search_web(keywords, rerank_query)
+
             search_context = "\n".join([
                 f"Source: {result['title']}\nContent: {result['detailed_content']}"
                 for result in search_results
             ])
             sources = [{'title': r['title'], 'url': r['link']} for r in search_results]
-            
+
             prompt = f"""You are a voice assistant. Based on the following search results and the user's query, 
                         provide a helpful and informed response. Make your response natural and conversational, 
                         avoid using markdown or emoji.
@@ -149,10 +145,14 @@ def process_audio_or_text():
                         The json should in {{"response":YOUR_RESPONSE}} format.
                         """
 
+        # Update stage to "thinking" during response generation
+        current_stage = "Thinking"
+
         response = chat.send_message(prompt)
         decoded_response = json.loads(response.text)["response"]
-        
-        print("Assistant Response: ", decoded_response)    
+        print("Assistant Response: ", decoded_response)
+
+        current_stage = "Generating Audio"  # Update stage to "generating_audio" during audio generation
         audio_path = tts.tts_to_file(text=decoded_response, language="en", 
                                     speaker_wav=clonePath if isCloning else None, 
                                     speaker=speaker, file_path="response.wav")
@@ -162,6 +162,7 @@ def process_audio_or_text():
 
         audio_buffer.seek(0)
         audio_base64 = base64.b64encode(audio_buffer.read()).decode('utf-8')
+        current_stage = "Hello World!"  # Reset the processing stage
         return Response(json.dumps({
             "llm_response": decoded_response, 
             "user_query": user_query, 
@@ -173,9 +174,6 @@ def process_audio_or_text():
         print(f"Error generating response: {e}")
         return jsonify({"error": "An error occurred while processing the query"}), 500
 
-@app.route('/api/test', methods=['POST'])
-def test():
-    return jsonify({"transcription": "Testing"}), 200
-
 if __name__ == '__main__':
+    current_stage = "Hello World!"  # Initialize the processing stage
     app.run(host="0.0.0.0", port=5000, ssl_context=(r"src\certificates\localhost.pem", r"src/certificates/localhost.key"))

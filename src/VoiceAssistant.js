@@ -1,5 +1,6 @@
-import React, { useState, useRef} from 'react';
+import React, { useState, useRef, useEffect} from 'react';
 import MessageBubble from './MessageBubbles';
+import VoiceAssistantInput from './VoiceAssistantInput';
 
 
 // Due to proxy, the other device must use host of this proxy
@@ -36,6 +37,7 @@ const VoiceAssistant = () => {
     const audioChunksRef = useRef([]);
     const chatContainerRef = useRef(null);
     const [isTouchDevice, setIsTouchDevice] = useState(false);
+    const [stage, setStage] = useState("Hello World!");
 
     const handleSpeakerChange = (e) => {
         setSelectedSpeaker(e.target.value);
@@ -73,6 +75,24 @@ const VoiceAssistant = () => {
             setUploading(false);
         }
     };
+
+    const fetchStage = async () => {
+        try {
+            const response = await fetch('/api/stage');
+            if (!response.ok) {
+                throw new Error(`HTTP error! Status: ${response.status}`);
+            }
+            const data = await response.json();
+            setStage(data.stage);
+        } catch (error) {
+            console.error("Error fetching stage:", error);
+        }
+    };
+
+    useEffect(() => {
+        const interval = setInterval(fetchStage, 1000); // Poll the stage endpoint every second
+        return () => clearInterval(interval);
+    }, []);
 
     // Start recording audio for voice input
     const startRecording = async () => {
@@ -153,13 +173,16 @@ const VoiceAssistant = () => {
         e.preventDefault();
         if (userInput.trim() === '') return;
 
+        setStage("Processing");
         const userMessage = { text: userInput, sender: 'user' };
         setUserInput("");
         setMessages((prevMessages) => [...prevMessages, userMessage]);
+
         try {
             let formData = new FormData();
             formData.append("text", userInput);
             formData.append("speaker", selectedSpeaker);
+
             const response = await fetch('/api/process', {
                 method: 'POST',
                 body: formData,
@@ -169,19 +192,21 @@ const VoiceAssistant = () => {
                 throw new Error(`HTTP error! Status: ${response.status}`);
             }
 
+            setStage("Generating");
             const result = await response.json();
             const assistantMessage = {
                 text: result.llm_response,
                 sender: 'assistant',
-                sources: result.sources, // Save the sources in the message
-                audioBase64: result.audio_base64, // Save assistant's audio in the message
+                sources: result.sources,
+                audioBase64: result.audio_base64,
             };
 
-            // Add messages to chat history
             setMessages((prevMessages) => [...prevMessages, assistantMessage]);
+            setStage("Hello World!");
         } catch (error) {
             console.error("Error fetching data from server:", error.message);
             setError("Failed to process text. Please check your server connection.");
+            setStage("Hello World!");
         }
     };
 
@@ -297,6 +322,7 @@ const VoiceAssistant = () => {
                             message={message}
                         />
                     ))}
+                    
                 </div>
 
 
@@ -304,14 +330,15 @@ const VoiceAssistant = () => {
                 <form onSubmit={handleTextSubmit} className="space-y-2">
                     <div className="flex items-center gap-2">
                         <div className="flex-1">
-                            <input
-                                type="text"
-                                value={userInput}
-                                onChange={(e) => setUserInput(e.target.value)}
-                                placeholder="Type a message"
-                                className="w-full bg-gray-50 text-gray-800 placeholder-gray-400 rounded-lg px-4 py-2 border border-gray-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 focus:outline-none"
+                            <VoiceAssistantInput
+                                userInput={userInput}
+                                setUserInput={setUserInput}
+                                onSubmit={handleTextSubmit}
+                                disabled={stage !== "Hello World!"}
+                                stage={stage}
                             />
                         </div>
+
                         <button
                             type="submit"
                             disabled={userInput.trim() === ''}
@@ -341,11 +368,21 @@ const VoiceAssistant = () => {
                             type="button"
                             style={preventTouchCallout}
                             {...touchProps}
-                            className={`flex items-center justify-center w-10 h-10 rounded-lg border transition-colors ${isRecording
+                            disabled={stage !== "Hello World!"}  // Disable when not in initial state
+                            className={`flex items-center justify-center w-10 h-10 rounded-lg border transition-colors 
+        ${isRecording
                                     ? "bg-red-50 border-red-500 text-red-500 hover:bg-red-100"
-                                    : "bg-gray-50 border-gray-300 text-gray-600 hover:bg-gray-100"
+                                    : stage !== "Hello World!"
+                                        ? "bg-gray-100 border-gray-200 text-gray-300 cursor-not-allowed"  // Disabled state
+                                        : "bg-gray-50 border-gray-300 text-gray-600 hover:bg-gray-100"
                                 }`}
-                            title={isRecording ? "Recording..." : "Hold to Record"}
+                            title={
+                                stage !== "Hello World!"
+                                    ? "Recording disabled while processing"
+                                    : isRecording
+                                        ? "Recording..."
+                                        : "Hold to Record"
+                            }
                         >
                             <svg
                                 xmlns="http://www.w3.org/2000/svg"
