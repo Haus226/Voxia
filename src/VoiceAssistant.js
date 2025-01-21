@@ -1,4 +1,6 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef} from 'react';
+import MessageBubble from './MessageBubbles';
+
 
 // Due to proxy, the other device must use host of this proxy
 const VoiceAssistant = () => {
@@ -33,7 +35,6 @@ const VoiceAssistant = () => {
     const mediaRecorderRef = useRef(null);
     const audioChunksRef = useRef([]);
     const chatContainerRef = useRef(null);
-    const [currentAudio, setCurrentAudio] = useState(null); // Reference to the currently playing audio
     const [isTouchDevice, setIsTouchDevice] = useState(false);
 
     const handleSpeakerChange = (e) => {
@@ -131,8 +132,9 @@ const VoiceAssistant = () => {
 
                 const result = await response.json();
                 const assistantMessage = {
-                    text: result["llm_response"],
+                    text: result.llm_response,
                     sender: 'assistant',
+                    sources: result.sources, // Save the sources in the message
                     audioBase64: result.audio_base64, // Save assistant's audio in the message
                 };
 
@@ -144,33 +146,6 @@ const VoiceAssistant = () => {
                 setError("Failed to process audio");
             }
         };
-    };
-
-    // Play audio on double-click
-    const playAudio = (audioURL, audioBase64) => {
-        if (!audioURL && !audioBase64) return;
-
-        // Stop the currently playing audio, if any
-        if (currentAudio) {
-            currentAudio.pause();
-            currentAudio.currentTime = 0;
-        }
-
-        let audioBlob;
-        if (audioBase64) {
-            audioBlob = new Blob(
-                [Uint8Array.from(atob(audioBase64), (c) => c.charCodeAt(0))],
-                { type: "audio/mp3" }
-            );
-        } else {
-            audioBlob = null; // URL will be used directly
-        }
-
-        const audio = new Audio(audioBlob ? URL.createObjectURL(audioBlob) : audioURL);
-        setCurrentAudio(audio);
-
-        audio.play();
-        audio.onended = () => setCurrentAudio(null); // Clear the reference when playback ends
     };
 
     const handleTextSubmit = async (e) => {
@@ -196,8 +171,9 @@ const VoiceAssistant = () => {
 
             const result = await response.json();
             const assistantMessage = {
-                text: result["llm_response"],
+                text: result.llm_response,
                 sender: 'assistant',
+                sources: result.sources, // Save the sources in the message
                 audioBase64: result.audio_base64, // Save assistant's audio in the message
             };
 
@@ -239,7 +215,6 @@ const VoiceAssistant = () => {
         );
         setIsTouchDevice(isTouch);
     }, []);
-    console.log(isRecording);
     
 
     return (
@@ -317,23 +292,13 @@ const VoiceAssistant = () => {
                     className="h-96 overflow-y-auto flex flex-col space-y-4 mb-4 p-4 bg-gray-50 rounded-lg"
                 >
                     {messages.map((message, index) => (
-                        <div
+                        <MessageBubble
                             key={index}
-                            className={`flex ${message.sender === 'user' ? 'justify-end' : 'justify-start'}`}
-                            onDoubleClick={() =>
-                                message.audioBase64
-                                    ? playAudio(null, message.audioBase64)
-                                    : playAudio(message.audioURL, null)
-                            }
-                        >
-                            <div
-                                className={`max-w-xs p-3 rounded-lg text-white ${message.sender === 'user' ? 'bg-indigo-500' : 'bg-indigo-600'}`}
-                            >
-                                <p>{message.text}</p>
-                            </div>
-                        </div>
+                            message={message}
+                        />
                     ))}
                 </div>
+
 
                 {/* Input form - styled to match overall theme */}
                 <form onSubmit={handleTextSubmit} className="space-y-2">
