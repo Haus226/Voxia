@@ -59,7 +59,6 @@ clonePath = "clone.wav"
 speaker = None
 
 
-
 @app.route('/api/stage', methods=['GET'])
 def get_stage():
     """Endpoint to get the current processing stage."""

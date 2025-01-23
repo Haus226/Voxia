@@ -1,0 +1,35 @@
+@keyframes smoothFade {
+    0% { opacity: 1; }
+    20% { opacity: 0.7; }
+    40% { opacity: 0.4; }
+    60% { opacity: 0.4; }
+    80% { opacity: 0.7; }
+    100% { opacity: 1; }
+}
+
+@keyframes smoothBounce {
+    0%, 100% { 
+        transform: translateY(0);
+        animation-timing-function: cubic-bezier(0.8, 0, 1, 1);
+    }
+    50% { 
+        transform: translateY(-6px);
+        animation-timing-function: cubic-bezier(0, 0, 0.2, 1);
+    }
+}
+
+.animate-fadeInOut {
+    animation: smoothFade 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+.animate-bounce {
+    animation: smoothBounce 1s infinite;
+}
+
+.delay-100 {
+    animation-delay: 100ms;
+}
+
+.delay-200 {
+    animation-delay: 200ms;
+}

@@ -404,9 +404,9 @@ const VoiceAssistant = () => {
 
                 </form>
 
-                <p className="text-xs text-center text-gray-500 mt-4">
+                {/* <p className="text-xs text-center text-gray-500 mt-4">
                     Built with ❤️ and React
-                </p>
+                </p> */}
             </div>
         </div>
     );
